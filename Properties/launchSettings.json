@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LocalizerScan": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\NTDLS\\NetTunnel\" \"NetTunnel.UI\" 16"
+    }
+  }
+}
