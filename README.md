@@ -3,7 +3,7 @@
 Command line tool for projects that use the [`NTDLS.Localization`](https://www.nuget.org/packages/NTDLS.Localization) NuGet package.
 It keeps a project's translation database in step with its source code:
 
-1. **Scans** every `*.cs` file under a folder for the phrases the code asks for, and adds the new ones to the database.
+1. **Scans** every `*.cs`, `*.cshtml` (ASP.NET views and pages) and `*.razor` file under a folder for the phrases the code asks for, and adds the new ones to the database.
 2. **Validates** the translations already in the database and clears the ones that are certainly broken.
 3. **Translates** every empty cell, one language at a time (several languages concurrently), and saves each batch as it completes.
 
@@ -17,7 +17,7 @@ LocalizationScan <rootPath> <projectName> [concurrency]
 
 | Argument | Meaning |
 | --- | --- |
-| `rootPath` | Folder to scan. Every `*.cs` file beneath it is read (see [What is scanned](#what-is-scanned)). Typically the solution folder. |
+| `rootPath` | Folder to scan. Every `*.cs`, `*.cshtml` and `*.razor` file beneath it is read (see [What is scanned](#what-is-scanned)). Typically the solution folder. |
 | `projectName` | Project folder under `rootPath` that owns the database, i.e. `<rootPath>\<projectName>\Translations\Translations.db`. |
 | `concurrency` | Number of languages translated at the same time. Optional, default `4`. |
 

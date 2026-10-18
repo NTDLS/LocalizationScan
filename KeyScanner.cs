@@ -77,7 +77,22 @@ namespace LocalizationScan
         /// <summary>
         /// The folders that are never scanned: build output, tools, tests, including projects named *.Tests (their phrases are made up) and reference copies.
         /// </summary>
-        private static readonly string[] _ignoredFolders = ["bin", "obj", ".git", ".vs", "packages", "Tests", "LocalizationScan", "Translations", "publish"];
+        private static readonly string[] _ignoredFolders = ["bin", "obj", ".git", ".vs", ".idea", "packages", "node_modules", "TestResults", "Tests", "LocalizationScan", "Translations", "publish"];
+
+        /// <summary>
+        /// The kinds of file that are scanned. Razor files (ASP.NET views, pages and Blazor components) are scanned as well as C#.
+        /// </summary>
+        private static readonly string[] _sourceExtensions = [".cs", ".cshtml", ".razor"];
+
+        [GeneratedRegex(@"@\*.*?\*@|<!--.*?-->", RegexOptions.Singleline)]
+        private static partial Regex RazorComments();
+
+        /// <summary>
+        /// A Razor file with its comments (@* ... *@ and HTML comments) blanked out, line breaks kept. C# comment stripping is not used for
+        /// Razor: markup is full of apostrophes and "//" (as in URLs) that are not C# syntax.
+        /// </summary>
+        public static string StripRazorComments(string markup)
+            => RazorComments().Replace(markup, m => new string('\n', m.Value.Count(c => c == '\n')));
 
         /// <summary>
         /// The source code with its comments blanked out, so that a Localize("...") that is only an example in a comment (or has
@@ -197,9 +212,9 @@ namespace LocalizationScan
         /// <summary>
         /// The phrases asked for in a piece of source code.
         /// </summary>
-        public static IEnumerable<string> ExtractKeys(string sourceCode)
+        public static IEnumerable<string> ExtractKeys(string sourceCode, bool isRazor = false)
         {
-            sourceCode = StripComments(sourceCode);
+            sourceCode = isRazor ? StripRazorComments(sourceCode) : StripComments(sourceCode);
 
             foreach (Match match in RegularString().Matches(sourceCode))
             {
@@ -219,7 +234,8 @@ namespace LocalizationScan
         {
             var root = Path.GetFullPath(rootPath);
 
-            return Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+            return Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+                .Where(file => _sourceExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
                 .Where(file => !Path.GetRelativePath(root, file)
                     .Split(Path.DirectorySeparatorChar)
                     .SkipLast(1) //The file name itself is not a folder.
@@ -237,7 +253,9 @@ namespace LocalizationScan
             {
                 var code = File.ReadAllText(file);
 
-                foreach (var key in ExtractKeys(code))
+                var isRazor = !file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+
+                foreach (var key in ExtractKeys(code, isRazor))
                 {
                     if (!string.IsNullOrWhiteSpace(key))
                     {

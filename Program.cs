@@ -30,7 +30,7 @@ namespace LocalizationScan
                 Console.WriteLine("""
                     Usage: LocalizationScan <rootPath> <projectName> [concurrency]
 
-                      rootPath     Folder to scan for Localize("...") calls (all *.cs files beneath it).
+                      rootPath     Folder to scan for Localize("...") calls (all *.cs, *.cshtml and *.razor files beneath it).
                       projectName  Project folder (under rootPath) that holds Translations\Translations.db.
                       concurrency  Languages to translate at once (default 4).
 
