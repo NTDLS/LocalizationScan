@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "LocalizationScan": {
-      "commandName": "Project",
-      "commandLineArgs": "\"C:\Path\To\Solution\" \"ProjectName\" 8"
-    }
-  }
-}
