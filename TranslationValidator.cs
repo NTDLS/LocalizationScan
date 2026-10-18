@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace LocalizerScan
+namespace LocalizationScan
 {
     /// <summary>
     /// Detects machine translations that are certainly broken, so they can be rejected and translated again.

@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using VPT.Einkr.Client;
 
-namespace LocalizerScan
+namespace LocalizationScan
 {
     internal class Program
     {
@@ -15,6 +15,7 @@ namespace LocalizerScan
 
         private const string ModelName = "Stratum-27B";
         private const string EscalationModelName = "";
+        private const string DefaultKeyFile = @"C:\EinkrKey.txt";
         private const int DefaultConcurrency = 4;
         private const int BatchSize = 25;
         private const int MaxBatchAttempts = 5;
@@ -24,18 +25,53 @@ namespace LocalizerScan
 
         private static async Task<int> Main(string[] args)
         {
-            if (args.Length < 2)
+            if (args.Length < 2 || args[0] is "-h" or "--help" or "/?")
             {
-                Console.WriteLine("Usage: LocalizerScan <rootPath> <projectName> [concurrency]");
+                Console.WriteLine("""
+                    Usage: LocalizationScan <rootPath> <projectName> [concurrency]
+
+                      rootPath     Folder to scan for Localize("...") calls (all *.cs files beneath it).
+                      projectName  Project folder (under rootPath) that holds Translations\Translations.db.
+                      concurrency  Languages to translate at once (default 4).
+
+                    Environment variables (all optional):
+                      LOCALIZATION_SCAN_API_KEY               Einkr API key. Takes precedence over the key file.
+                      LOCALIZATION_SCAN_KEY_FILE              File containing the API key (default C:\EinkrKey.txt).
+                      LOCALIZATION_SCAN_MODEL                 Translation model (default Stratum-27B).
+                      LOCALIZATION_SCAN_ESCALATION_MODEL      Larger model for phrases the primary model fails on (default none).
+                    """);
                 return 1;
             }
 
-            var apiKey = File.ReadAllText("C:\\EinkrKey.txt").Trim();
+            var apiKey = Environment.GetEnvironmentVariable("LOCALIZATION_SCAN_API_KEY");
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                var keyFile = Environment.GetEnvironmentVariable("LOCALIZATION_SCAN_KEY_FILE");
+                if (string.IsNullOrWhiteSpace(keyFile))
+                {
+                    keyFile = DefaultKeyFile;
+                }
+
+                if (!File.Exists(keyFile))
+                {
+                    Console.Error.WriteLine($"No API key found. Set LOCALIZATION_SCAN_API_KEY or put the key in '{keyFile}' (see LOCALIZATION_SCAN_KEY_FILE).");
+                    return 2;
+                }
+
+                apiKey = File.ReadAllText(keyFile);
+            }
+            apiKey = apiKey.Trim();
+
+            var modelName = Environment.GetEnvironmentVariable("LOCALIZATION_SCAN_MODEL");
+            if (string.IsNullOrWhiteSpace(modelName))
+            {
+                modelName = ModelName;
+            }
 
             //The client is stateless and safe to share, so all of the concurrent translations use one connection pool.
-            using var einkr = new EinkrAIClient(ModelName, apiKey);
+            using var einkr = new EinkrAIClient(modelName, apiKey);
 
-            var escalationModelName = Environment.GetEnvironmentVariable("LOCALIZER_ESCALATION_MODEL");
+            var escalationModelName = Environment.GetEnvironmentVariable("LOCALIZATION_SCAN_ESCALATION_MODEL");
             if (string.IsNullOrWhiteSpace(escalationModelName))
             {
                 escalationModelName = EscalationModelName;

@@ -2,3 +2,6 @@
 obj/
 
 bin/
+
+Installers/publish/
+Installers/Output/

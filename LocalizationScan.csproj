@@ -5,10 +5,10 @@
 	  <Copyright>Copyright © 2026 NetworkDLS</Copyright>
 	  <Version>1.0.0</Version>
 	  <Authors>NetworkDLS</Authors>
-	  <Product>LocalizerScan</Product>
+	  <Product>LocalizationScan</Product>
 	  
 	  <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

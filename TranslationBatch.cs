@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace LocalizerScan
+namespace LocalizationScan
 {
     /// <summary>
     /// A batch of phrases sent to the translator in one request: how the request is written and how the reply is read.

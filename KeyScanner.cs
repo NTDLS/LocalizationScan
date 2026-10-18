@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace LocalizerScan
+namespace LocalizationScan
 {
     /// <summary>
     /// Finds the phrases the source code asks to have localized: the first argument of each <c>Localize("...")</c> call, and the
@@ -77,7 +77,7 @@ namespace LocalizerScan
         /// <summary>
         /// The folders that are never scanned: build output, tools, tests, including projects named *.Tests (their phrases are made up) and reference copies.
         /// </summary>
-        private static readonly string[] _ignoredFolders = ["bin", "obj", ".git", ".vs", "packages", "Tests", "LocalizerScan", "Translations", "publish"];
+        private static readonly string[] _ignoredFolders = ["bin", "obj", ".git", ".vs", "packages", "Tests", "LocalizationScan", "Translations", "publish"];
 
         /// <summary>
         /// The source code with its comments blanked out, so that a Localize("...") that is only an example in a comment (or has
@@ -113,10 +113,25 @@ namespace LocalizerScan
                     }
                     i++; //Past the "*/".
                 }
+                else if (c == '"' && i + 2 < code.Length && code[i + 1] == '"' && code[i + 2] == '"')
+                {
+                    //A raw string literal ("""..."""): copy it whole. It ends at a run of quotes as long as the one that opened it.
+                    int quotes = 0;
+                    while (i + quotes < code.Length && code[i + quotes] == '"')
+                    {
+                        quotes++;
+                    }
+
+                    var closing = new string('"', quotes);
+                    int end = code.IndexOf(closing, i + quotes, StringComparison.Ordinal);
+                    int stop = end < 0 ? code.Length : end + quotes;
+                    result.Append(code, i, stop - i);
+                    i = stop - 1;
+                }
                 else if (c == '"')
                 {
                     //A string literal: copy it whole. A verbatim string (@"...") ends at a quote that is not doubled,
-                    //  any other at a quote that is not escaped. Raw strings (""") are not used in this code base.
+                    //  any other at a quote that is not escaped.
                     bool verbatim = i > 0 && (code[i - 1] == '@' || (i > 1 && code[i - 2] == '@' && code[i - 1] == '$'));
                     result.Append(c);
                     i++;
