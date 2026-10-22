@@ -28,11 +28,13 @@ namespace LocalizationScan
             if (args.Length < 2 || args[0] is "-h" or "--help" or "/?")
             {
                 Console.WriteLine("""
-                    Usage: LocalizationScan <rootPath> <projectName> [concurrency]
+                    Usage: LocalizationScan <rootPath> <projectName> [concurrency] [instructionsFile]
 
                       rootPath     Folder to scan for Localize("...") calls (all *.cs, *.cshtml and *.razor files beneath it).
                       projectName  Project folder (under rootPath) that holds Translations\Translations.db.
                       concurrency  Languages to translate at once (default 4).
+                      instructionsFile  Text file (relative to the working directory) of extra instructions added to the end of the
+                                   translation prompt, e.g. "Acme is a product name, never translate it".
 
                     Environment variables (all optional):
                       LOCALIZATION_SCAN_API_KEY               Einkr API key. Takes precedence over the key file.
@@ -87,10 +89,24 @@ namespace LocalizationScan
             var translationDatabase = Path.Join(rootPath, args[1], "Translations", "Translations.db");
             var concurrency = args.Length > 2 && int.TryParse(args[2], out var requested) && requested > 0 ? requested : DefaultConcurrency;
 
+            string? extraInstructions = null;
+            if (args.Length > 3 && !string.IsNullOrWhiteSpace(args[3]))
+            {
+                var instructionsFile = Path.GetFullPath(args[3]); //Relative to the working directory.
+                if (!File.Exists(instructionsFile))
+                {
+                    Console.Error.WriteLine($"The instructions file was not found: {instructionsFile}");
+                    return 3;
+                }
+
+                extraInstructions = File.ReadAllText(instructionsFile).Trim();
+                Console.WriteLine($"Using extra translation instructions from: {instructionsFile}");
+            }
+
             EnsureDatabase(translationDatabase);
             ScanSourceFilesAndAddMissingKeys(rootPath, translationDatabase);
             ClearInvalidTranslations(translationDatabase);
-            await FillInMissingTranslations(translationDatabase, einkr, escalationEinkr, "English", concurrency);
+            await FillInMissingTranslations(translationDatabase, einkr, escalationEinkr, "English", concurrency, extraInstructions);
 
             return 0;
         }
@@ -280,10 +296,16 @@ namespace LocalizationScan
         /// Translates the languages concurrently. Each language is its own column in the translation table,
         ///  so the only things shared between them are the (thread-safe) clients and the database lock.
         /// </summary>
-        private static async Task FillInMissingTranslations(string translationDatabase, EinkrAIClient chat, EinkrAIClient? escalationChat, string sourceLanguage, int concurrency)
+        private static async Task FillInMissingTranslations(string translationDatabase, EinkrAIClient chat, EinkrAIClient? escalationChat, string sourceLanguage, int concurrency, string? extraInstructions)
         {
             var cultures = _supportedCultures.Collection.Where(o => o.Code != "en").ToList();
             var promptTemplate = EmbeddedResourceReader.LoadText(@"EmbeddedText\SystemPrompt.txt");
+
+            //Appended after the built-in prompt so that the output format rules come first and the project specifics refine them.
+            if (!string.IsNullOrWhiteSpace(extraInstructions))
+            {
+                promptTemplate += "\n\nAdditional instructions for this project (the rules above and the JSON reply format still apply):\n" + extraInstructions + "\n";
+            }
 
             Console.WriteLine($"Translating {cultures.Count:n0} languages, {concurrency} at a time.");
 
